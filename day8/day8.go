@@ -4,14 +4,42 @@ import (
 	_ "embed"
 	"fmt"
 	"strings"
+	"time"
 )
 
 //go:embed input
 var input string
 
 func main() {
-	part1()
+	fmt.Print("\033[?25l")
+	//part1()
 	part2()
+	fmt.Print("\033[?25h")
+}
+
+type uniqCoordMap map[nodeCoord]struct{}
+
+func (u uniqCoordMap) Add(n nodeCoord) {
+	if _, ok := u[n]; !ok {
+		u[n] = struct{}{}
+	} else {
+		return
+	}
+
+	// animate
+	if len(u)%60 != 1 {
+		n.Print()
+	} else {
+		// complete reprint
+		clearScreen()
+		moveCursor(1, 1)
+		fmt.Print(input)
+		for k, _ := range u {
+			k.Print()
+		}
+	}
+
+	time.Sleep(10 * time.Millisecond)
 }
 
 func part1() {
@@ -19,35 +47,35 @@ func part1() {
 
 	maxRow := len(lines)
 	maxCol := len(lines[0])
-	puzzMap := make(map[string][]nodeCoord)
+	antennaMap := make(map[string][]nodeCoord)
+	uniqueAntinodes := make(uniqCoordMap)
 
-	unique := make(map[nodeCoord]struct{})
 	for i, line := range lines {
 		for j, node := range strings.Split(line, "") {
 			if node == "." {
 				continue
 			}
 			coord := nodeCoord{row: i, col: j}
-			if _, ok := puzzMap[node]; ok {
-				for _, otherCoord := range puzzMap[node] {
+			if _, ok := antennaMap[node]; ok {
+				for _, otherCoord := range antennaMap[node] {
 					rowDist := coord.row - otherCoord.row
 					colDist := coord.col - otherCoord.col
 
 					testCoord1 := nodeCoord{row: coord.row + rowDist, col: coord.col + colDist}
 					testCoord2 := nodeCoord{row: otherCoord.row - rowDist, col: otherCoord.col - colDist}
 					if testCoord1.Valid(maxRow, maxCol) {
-						unique[testCoord1] = struct{}{}
+						uniqueAntinodes.Add(testCoord1)
 					}
 					if testCoord2.Valid(maxRow, maxCol) {
-						unique[testCoord2] = struct{}{}
+						uniqueAntinodes.Add(testCoord2)
 					}
 				}
 			}
-			puzzMap[node] = append(puzzMap[node], coord)
+			antennaMap[node] = append(antennaMap[node], coord)
 		}
 	}
 
-	fmt.Println("part1", len(unique))
+	fmt.Println("part1", len(uniqueAntinodes))
 }
 
 func part2() {
@@ -55,19 +83,19 @@ func part2() {
 
 	maxRow := len(lines)
 	maxCol := len(lines[0])
-	puzzMap := make(map[string][]nodeCoord)
+	antennaMap := make(map[string][]nodeCoord)
+	uniqueAntinodes := make(uniqCoordMap)
 
-	unique := make(map[nodeCoord]struct{})
 	for i, line := range lines {
 		for j, node := range strings.Split(line, "") {
 			if node == "." {
 				continue
 			}
 			coord := nodeCoord{row: i, col: j}
-			if _, ok := puzzMap[node]; ok {
-				for _, otherCoord := range puzzMap[node] {
-					unique[coord] = struct{}{}
-					unique[otherCoord] = struct{}{}
+			if _, ok := antennaMap[node]; ok {
+				for _, otherCoord := range antennaMap[node] {
+					uniqueAntinodes.Add(coord)
+					uniqueAntinodes.Add(otherCoord)
 
 					rowDist := coord.row - otherCoord.row
 					colDist := coord.col - otherCoord.col
@@ -76,7 +104,7 @@ func part2() {
 					for {
 						testCoord1 = nodeCoord{row: testCoord1.row + rowDist, col: testCoord1.col + colDist}
 						if testCoord1.Valid(maxRow, maxCol) {
-							unique[testCoord1] = struct{}{}
+							uniqueAntinodes.Add(testCoord1)
 						} else {
 							break
 						}
@@ -86,18 +114,19 @@ func part2() {
 					for {
 						testCoord2 = nodeCoord{row: testCoord2.row - rowDist, col: testCoord2.col - colDist}
 						if testCoord2.Valid(maxRow, maxCol) {
-							unique[testCoord2] = struct{}{}
+							uniqueAntinodes.Add(testCoord2)
 						} else {
 							break
 						}
 					}
 				}
 			}
-			puzzMap[node] = append(puzzMap[node], coord)
+			antennaMap[node] = append(antennaMap[node], coord)
 		}
 	}
 
-	fmt.Println("part2", len(unique))
+	moveCursor(maxRow+2, 0)
+	fmt.Println("part2", len(uniqueAntinodes))
 }
 
 type nodeCoord struct {
@@ -110,4 +139,16 @@ func (n nodeCoord) Valid(maxRow, maxCol int) bool {
 		n.row < maxRow &&
 		n.col >= 0 &&
 		n.col < maxCol
+}
+
+func (n nodeCoord) Print() {
+	fmt.Printf("\033[%d;%dH#", n.row+1, n.col+1)
+}
+
+func moveCursor(row, col int) {
+	fmt.Printf("\033[%d;%dH", row, col)
+}
+
+func clearScreen() {
+	fmt.Print("\033[H\033[2J") // Clear the screen
 }
