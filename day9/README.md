@@ -1,6 +1,6 @@
 # Day 9
 
-This one wasn't fun
+This one wasn't fun. My solution is ugly and sad.
 
 part1 ~40 min. The directions for part 1 where confusing. Mostly because this isn't how defragging works. Why would I move parts of files, not whole files...
 
