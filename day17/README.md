@@ -6,11 +6,11 @@ Part 2. Okay, this certainly takes things to a new level. First thought was to j
 
 Back the next day. It was clear I would need to reverse engineer the program to find a solution. I created this explaination:
 ```
-2,4 -> B = A % 8           :: the first 3 bits
-1,1 -> B = B ^ 1           :: ensure the 1 bit -> 1,3,5,7
-7,5 -> C = A / 2pow(reg B) :: A / 2,8,32,128
+2,4 -> B = A % 8           :: the first 3 bits : 0-7
+1,1 -> B = B ^ 1           :: xor the 1 bit : 1,0,3,2,5,4,7,6
+7,5 -> C = A / 2pow(reg B) :: A / 2,1,8,4,32,16,128,64
 0,3 -> A = A / 8           :: shift A by 3 bits
-1,4 -> B = B ^ 4           :: 1,3,5,7 -> 5 7 1 3
+1,4 -> B = B ^ 4           :: xor the 2 bit : 1,0,3,2,5,4,7,6 -> 5,4,7,6,1,0,3,2
 4,5 -> B = B ^ C           :: ???
 5,5 -> out  B % 8          :: the first 3 bits
 3,0 -> jump to start
