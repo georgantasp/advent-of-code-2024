@@ -3,7 +3,6 @@ package main
 import (
 	_ "embed"
 	"fmt"
-	"sort"
 	"strings"
 )
 
@@ -14,7 +13,7 @@ var inputtest string
 var input string
 
 func main() {
-	inputs := strings.Split(inputtest, "\n\n")
+	inputs := strings.Split(input, "\n\n")
 
 	towelsInput := strings.Split(inputs[0], ", ")
 	towels := []string{}
@@ -25,99 +24,62 @@ func main() {
 
 	total := 0
 	totalWays := 0
-	possibleDesigns := from(towels)
+	towelMap := from(towels)
 	impossibleDesigns := make(map[string]struct{})
-	for i, design := range designs {
-		fmt.Println(design)
-		fmt.Print("i ", i)
-		if ways := designPossible(design, possibleDesigns, impossibleDesigns); ways > 0 {
-			fmt.Print(" ", ways)
+	possibleDesigns := make(map[string]int)
+	for _, design := range designs {
+		if ways := designPossible(design, towelMap, impossibleDesigns, possibleDesigns); ways > 0 {
 			total++
 			totalWays += ways
 		}
-		fmt.Println()
 	}
 	fmt.Println("part1", total)
 	fmt.Println("part2", totalWays)
 }
 
-func from(towels []string) map[string]int {
-
-	sort.Slice(towels, func(i, j int) bool {
-		if len(towels[i]) != len(towels[j]) {
-			return len(towels[i]) < len(towels[j])
-		}
-		return towels[i] < towels[j]
-	})
-
-	possibleDesigns := make(map[string]int)
+func from(towels []string) map[string]struct{} {
+	m := make(map[string]struct{})
 	for _, towel := range towels {
-		if len(towel) == 1 {
-			possibleDesigns[towel] = 1
-		} else {
-			possibleDesigns[towel] = 1 + collectWays(towel, possibleDesigns)
-		}
+		m[towel] = struct{}{}
 	}
 
-	return possibleDesigns
+	return m
 }
 
-func collectWays(towelPart string, possibleDesigns map[string]int) int {
-	if ways, ok := possibleDesigns[towelPart]; ok {
-		return ways
-	}
-
-	if len(towelPart) == 1 {
+func designPossible(design string, towels map[string]struct{}, impossibleDesigns map[string]struct{}, possibleDesigns map[string]int) int {
+	if _, ok := impossibleDesigns[design]; ok {
 		return 0
 	}
 
-	ways := 0
-	for m := 1; m < len(towelPart); m++ {
-		a := towelPart[:m]
-		b := towelPart[m:]
-
-		aWays := collectWays(a, possibleDesigns)
-		bWays := collectWays(b, possibleDesigns)
-
-		if aWays > 0 && bWays > 0 {
-			ways += 1
-		}
-	}
-	return ways
-}
-
-func designPossible(design string, possibleDesigns map[string]int, impossibleDesigns map[string]struct{}) int {
-	if ways, ok := possibleDesigns[design]; !ok && len(design) == 1 {
-		return 0
-	} else if ok {
-		return ways
+	if d, ok := possibleDesigns[design]; ok {
+		return d
 	}
 
 	ways := 0
+	if _, ok := towels[design]; ok {
+		ways = 1
+	}
 	for m := 1; m < len(design); m++ {
 		a := design[:m]
 		b := design[m:]
 
-		aPossible := 0
-		if _, ok := impossibleDesigns[a]; !ok {
-			aPossible = designPossible(a, possibleDesigns, impossibleDesigns)
-		}
-		bPossible := 0
-		if _, ok := impossibleDesigns[b]; !ok {
-			bPossible = designPossible(b, possibleDesigns, impossibleDesigns)
-		}
+		_, aPossible := towels[a]
+		bPossible := designPossible(b, towels, impossibleDesigns, possibleDesigns)
 
-		switch {
-		case aPossible < 1:
-			impossibleDesigns[a] = struct{}{}
-		case bPossible < 1:
-			impossibleDesigns[b] = struct{}{}
-		default:
-			ways += 1
+		if aPossible && bPossible > 0 {
+			ways += bPossible
 		}
 	}
 
-	possibleDesigns[design] = ways
+	if ways == 0 {
+		impossibleDesigns[design] = struct{}{}
+	} else {
+		possibleDesigns[design] = ways
+	}
 
 	return ways
 }
+
+/// bbr
+///  (b)(b)(r)
+///  (b)(br)
