@@ -18,7 +18,12 @@ type record struct {
 	c         coord
 	mazeValue string
 	score     int
+	next      coord
 	cheats    map[coord]int
+}
+
+func (r record) isUnscored() bool {
+	return (r.mazeValue == "." || r.mazeValue == "E") && r.score == 0
 }
 
 type coord struct {
@@ -38,31 +43,32 @@ func main() {
 
 	m.printMaze()
 	m.traverse()
-	part1 := m.findCheats(100)
-
+	part1 := m.findCheats(2, 100)
 	fmt.Println("part1", part1)
+	part2 := m.findCheats(20, 100)
+	fmt.Println("part1", part2)
 }
 
 func (m maze) traverse() {
 	y, x := m.findStart()
 	score := 0
 
-	isDotOrE := func(v record) bool {
-		return (v.mazeValue == "." || v.mazeValue == "E") && v.score == 0
-	}
-
 	for {
 		m[y][x].score = score
 
 		score++
 		switch {
-		case isDotOrE(m[y][x-1]):
+		case m[y][x-1].isUnscored():
+			m[y][x].next = coord{x: x - 1, y: y}
 			x = x - 1
-		case isDotOrE(m[y][x+1]):
+		case m[y][x+1].isUnscored():
+			m[y][x].next = coord{x: x + 1, y: y}
 			x = x + 1
-		case isDotOrE(m[y-1][x]):
+		case m[y-1][x].isUnscored():
+			m[y][x].next = coord{x: x, y: y - 1}
 			y = y - 1
-		case isDotOrE(m[y+1][x]):
+		case m[y+1][x].isUnscored():
+			m[y][x].next = coord{x: x, y: y + 1}
 			y = y + 1
 		}
 
@@ -74,68 +80,62 @@ func (m maze) traverse() {
 	m[y][x].score = score
 }
 
-func (m maze) findCheats(min int) int {
-
-	checkCheats := func(s, e record) int {
-		if e.mazeValue != "#" {
-			return -1
-		}
-		diffY := e.c.y - s.c.y
-		diffX := e.c.x - s.c.x
-
-		if e.c.y+diffY < 0 || e.c.x+diffX < 0 || e.c.y+diffY >= len(m) || e.c.x+diffX >= len(m[0]) {
-			return -1
-		}
-
-		landingRecord := m[e.c.y+diffY][e.c.x+diffX]
-		if landingRecord.mazeValue != "." && landingRecord.mazeValue != "E" {
-			return -1
-		}
-		saved := landingRecord.score - s.score - 2
-		if saved <= 0 {
-			return -1
-		}
-		s.cheats[e.c] = saved
-		return saved
-	}
-
-	isNext := func(s, e record) bool {
-		return (e.mazeValue == "." || e.mazeValue == "E") && s.score+1 == e.score
-	}
+func (m maze) findCheats(cheatLen, minSave int) int {
 
 	y, x := m.findStart()
 
 	total := 0
 	for {
-		if checkCheats(m[y][x], m[y][x-1]) >= min {
-			total++
-		}
-		if checkCheats(m[y][x], m[y][x+1]) >= min {
-			total++
-		}
-		if checkCheats(m[y][x], m[y-1][x]) >= min {
-			total++
-		}
-		if checkCheats(m[y][x], m[y+1][x]) >= min {
-			total++
+		m.findCheatsFor(y, x, cheatLen)
+
+		for _, v := range m[y][x].cheats {
+			if v >= minSave {
+				total++
+			}
 		}
 
-		switch {
-		case isNext(m[y][x], m[y][x-1]):
-			x = x - 1
-		case isNext(m[y][x], m[y][x+1]):
-			x = x + 1
-		case isNext(m[y][x], m[y-1][x]):
-			y = y - 1
-		case isNext(m[y][x], m[y+1][x]):
-			y = y + 1
-		}
+		n := m[y][x].next
+		y, x = n.y, n.x
 
 		if m[y][x].mazeValue == "E" {
 			break
 		}
 	}
 	return total
+}
+
+func abs(x int) int {
+	if x < 0 {
+		return -x
+	}
+	return x
+}
+
+func (m maze) findCheatsFor(y, x, cheatLenMax int) {
+	for yCheat := y - cheatLenMax; yCheat <= y+cheatLenMax; yCheat++ {
+		if yCheat < 0 || yCheat >= len(m) {
+			continue
+		}
+		for xCheat := x - cheatLenMax; xCheat <= x+cheatLenMax; xCheat++ {
+			if xCheat < 0 || xCheat >= len(m[0]) {
+				continue
+			}
+
+			cheatLen := abs(y-yCheat) + abs(x-xCheat)
+			if cheatLen > cheatLenMax {
+				continue
+			}
+
+			if m[yCheat][xCheat].mazeValue != "." && m[yCheat][xCheat].mazeValue != "E" {
+				continue
+			}
+
+			saved := m[yCheat][xCheat].score - m[y][x].score - cheatLen
+			if saved > 0 {
+				m[y][x].cheats[coord{y: yCheat, x: xCheat}] = saved
+			}
+		}
+	}
 }
 
 func (m maze) findStart() (int, int) {
