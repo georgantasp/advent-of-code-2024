@@ -13,12 +13,28 @@ var input string
 //go:embed inputtest
 var inputtest string
 
-type connectionsMap map[string]map[string]struct{}
+type connectionsByComputerMap map[string]map[string]struct{}
+type connectionsMap map[connection]struct{}
+
+type connection struct {
+	computer0 string
+	computer1 string
+}
+
+type party map[string]struct{}
+
+func NewConnection(computer0 string, computer1 string) connection {
+	if computer0 < computer1 {
+		return connection{computer0, computer1}
+	}
+	return connection{computer1, computer0}
+}
 
 func main() {
 
 	connectionsInput := strings.Split(input, "\n")
 
+	connectionsByComputer := connectionsByComputerMap{}
 	connections := connectionsMap{}
 
 	for _, conn := range connectionsInput {
@@ -26,28 +42,29 @@ func main() {
 
 		c0 := computers[0]
 		c1 := computers[1]
+		connections[NewConnection(c0, c1)] = struct{}{}
 
-		conn0, ok0 := connections[c0]
-		conn1, ok1 := connections[c1]
+		conn0, ok0 := connectionsByComputer[c0]
+		conn1, ok1 := connectionsByComputer[c1]
 
 		if ok0 {
 			conn0[c1] = struct{}{}
 		} else {
-			connections[c0] = map[string]struct{}{c1: {}}
+			connectionsByComputer[c0] = map[string]struct{}{c1: {}}
 		}
 
 		if ok1 {
 			conn1[c0] = struct{}{}
 		} else {
-			connections[c1] = map[string]struct{}{c0: {}}
+			connectionsByComputer[c1] = map[string]struct{}{c0: {}}
 		}
 	}
 
 	total := map[string]struct{}{}
-	for c1, conn := range connections {
+	for c1, conn := range connectionsByComputer {
 		if strings.HasPrefix(c1, "t") {
 			for c2, _ := range conn {
-				i := intersectMaps(conn, connections[c2])
+				i := intersectMaps(conn, connectionsByComputer[c2])
 				for c3, _ := range i {
 					if c3 != c2 && c3 != c1 {
 						possibleSet := []string{c1, c2, c3}
@@ -61,29 +78,46 @@ func main() {
 
 	fmt.Println("part1", len(total))
 
-	biggestParty := []string{}
-	for c1, _ := range connections {
-		party := connections.findBiggestParty(map[string]struct{}{c1: {}})
+	parties := map[string][]party{}
 
-		if len(party) > len(biggestParty) {
-			biggestParty = []string{}
-			for p, _ := range party {
-				biggestParty = append(biggestParty, p)
+	for computer0, conns := range connectionsByComputer {
+		parties[computer0] = []party{}
+
+		for computer1, _ := range conns {
+			var found bool
+			for _, testParty := range parties[computer0] {
+				canBelongInParty := true
+				for computer2, _ := range testParty {
+					if _, ok := connections[NewConnection(computer1, computer2)]; !ok {
+						canBelongInParty = false
+						break
+					}
+				}
+				if canBelongInParty {
+					found = true
+					testParty[computer1] = struct{}{}
+				}
 			}
-			slices.Sort(biggestParty)
+			if !found {
+				parties[computer0] = append(parties[computer0], party{computer0: struct{}{}, computer1: struct{}{}})
+			}
 		}
 	}
 
-	fmt.Println("part1", strings.Join(biggestParty, ","))
-}
+	var biggestParty []string
+	for _, computerPartires := range parties {
+		for _, p := range computerPartires {
+			if len(p) > len(biggestParty) {
+				biggestParty = make([]string, 0, len(p))
+				for c, _ := range p {
+					biggestParty = append(biggestParty, c)
+				}
+				slices.Sort(biggestParty)
+			}
+		}
+	}
 
-func (c connectionsMap) findBiggestParty(party map[string]struct{}) map[string]struct{} {
-	biggestParty := party
-	//for computer, _ := range c {
-	//	if
-	//}
-
-	return biggestParty
+	fmt.Println("part2", strings.Join(biggestParty, ","))
 }
 
 func intersectMaps(map1, map2 map[string]struct{}) map[string]struct{} {
@@ -96,4 +130,13 @@ func intersectMaps(map1, map2 map[string]struct{}) map[string]struct{} {
 	}
 
 	return result
+}
+
+func all(fns ...func() bool) bool {
+	for _, f := range fns {
+		if !f() {
+			return false
+		}
+	}
+	return true
 }
