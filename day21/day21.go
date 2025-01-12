@@ -14,7 +14,14 @@ var input string
 var inputtest string
 
 func main() {
+	part1 := calculate(2)
+	fmt.Println("part1", part1)
 
+	part2 := calculate(25)
+	fmt.Println("part1", part2)
+}
+
+func calculate(numberRobots int) int {
 	inputs := strings.Split(input, "\n")
 
 	a := arrowPad{}
@@ -24,7 +31,7 @@ func main() {
 	for _, i := range inputs {
 		fmt.Println(i)
 		all := n.encode(i)
-		for range 2 {
+		for range numberRobots {
 			all = a.encode(all)
 		}
 		r := all[0]
@@ -34,8 +41,7 @@ func main() {
 
 		total += l * n
 	}
-
-	fmt.Println("part1", total)
+	return total
 }
 
 type numberPad struct{}
@@ -155,6 +161,7 @@ func (a arrowPad) encode(buttonsCombinations []string) []string {
 	var result []string
 	for c := range buttonsCombinations {
 		buttonsArray := strings.Split(buttonsCombinations[c], "")
+
 		state := arrowPadCood("A")
 		var combinationResult []string
 		for b := range buttonsArray {
@@ -163,8 +170,12 @@ func (a arrowPad) encode(buttonsCombinations []string) []string {
 			combinationResult = combinations(combinationResult, combo)
 			state = next
 		}
-		result = append(result, combinationResult...)
-		result = shortest(result)
+
+		if result == nil || len(combinationResult[0]) < len(result[0]) {
+			result = combinationResult
+		} else if len(combinationResult[0]) == len(result[0]) {
+			result = append(result, combinationResult...)
+		}
 	}
 
 	return result
@@ -181,7 +192,6 @@ func (n numberPad) encode(code string) []string {
 		state = next
 	}
 
-	result = shortest(result)
 	return result
 }
 
@@ -314,19 +324,3 @@ func combinations(perm1, perm2 []string) []string {
 //	}
 //	return count
 //}
-
-func shortest(results []string) []string {
-	var s []string
-	for i, r := range results {
-		if i == 0 {
-			s = []string{r}
-		} else {
-			if len(r) < len(s[0]) {
-				s = []string{r}
-			} else if len(r) == len(s[0]) {
-				s = append(s, r)
-			}
-		}
-	}
-	return s
-}
