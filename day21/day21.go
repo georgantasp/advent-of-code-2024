@@ -36,10 +36,10 @@ func calculate(numberRobots int) int {
 		}
 		r := all[0]
 		l := len(r)
-		n, _ := strconv.Atoi(i[0 : len(i)-1])
-		fmt.Println("len", len(r), "n", n)
+		num, _ := strconv.Atoi(i[0 : len(i)-1])
+		fmt.Println("len", len(r), "n", num)
 
-		total += l * n
+		total += l * num
 	}
 	return total
 }
@@ -65,108 +65,38 @@ func (c *coord) applyButton(button string) {
 	}
 }
 
-func arrowPadCood(button string) coord {
-	switch button {
-	case "^":
-		return coord{x: 1, y: 0}
-	case "A":
-		return coord{x: 2, y: 0}
-	case "<":
-		return coord{x: 0, y: 1}
-	case "v":
-		return coord{x: 1, y: 1}
-	case ">":
-		return coord{x: 2, y: 1}
-	default:
-		return coord{x: 0, y: 0}
-	}
+var arrowPadButtondMap = map[string]coord{
+	"^": {x: 1, y: 0},
+	"A": {x: 2, y: 0},
+	"<": {x: 0, y: 1},
+	"v": {x: 1, y: 1},
+	">": {x: 2, y: 1},
 }
 
-//func arrowPadButton(c coord) string {
-//	switch c {
-//	case coord{x: 1, y: 0}:
-//		return "^"
-//	case coord{x: 2, y: 0}:
-//		return "A"
-//	case coord{x: 0, y: 1}:
-//		return "<"
-//	case coord{x: 1, y: 1}:
-//		return "v"
-//	case coord{x: 2, y: 1}:
-//		return ">"
-//	default:
-//		return "S"
-//	}
-//}
-
-func numberPadCoord(button string) coord {
-	switch button {
-	case "7":
-		return coord{x: 0, y: 0}
-	case "8":
-		return coord{x: 1, y: 0}
-	case "9":
-		return coord{x: 2, y: 0}
-	case "4":
-		return coord{x: 0, y: 1}
-	case "5":
-		return coord{x: 1, y: 1}
-	case "6":
-		return coord{x: 2, y: 1}
-	case "1":
-		return coord{x: 0, y: 2}
-	case "2":
-		return coord{x: 1, y: 2}
-	case "3":
-		return coord{x: 2, y: 2}
-	case "0":
-		return coord{x: 1, y: 3}
-	case "A":
-		return coord{x: 2, y: 3}
-	default:
-		return coord{x: 0, y: 3}
-	}
+var numberPadButtonMap = map[string]coord{
+	"7": {x: 0, y: 0},
+	"8": {x: 1, y: 0},
+	"9": {x: 2, y: 0},
+	"4": {x: 0, y: 1},
+	"5": {x: 1, y: 1},
+	"6": {x: 2, y: 1},
+	"1": {x: 0, y: 2},
+	"2": {x: 1, y: 2},
+	"3": {x: 2, y: 2},
+	"0": {x: 1, y: 3},
+	"A": {x: 2, y: 3},
 }
-
-//func numberPadButton(c coord) string {
-//	switch c {
-//	case coord{x: 0, y: 0}:
-//		return "7"
-//	case coord{x: 1, y: 0}:
-//		return "8"
-//	case coord{x: 2, y: 0}:
-//		return "9"
-//	case coord{x: 0, y: 1}:
-//		return "4"
-//	case coord{x: 1, y: 1}:
-//		return "5"
-//	case coord{x: 2, y: 1}:
-//		return "6"
-//	case coord{x: 0, y: 2}:
-//		return "1"
-//	case coord{x: 1, y: 2}:
-//		return "2"
-//	case coord{x: 2, y: 2}:
-//		return "3"
-//	case coord{x: 1, y: 3}:
-//		return "0"
-//	case coord{x: 2, y: 3}:
-//		return "A"
-//	default:
-//		return "S"
-//	}
-//}
 
 func (a arrowPad) encode(buttonsCombinations []string) []string {
 	var result []string
 	for c := range buttonsCombinations {
 		buttonsArray := strings.Split(buttonsCombinations[c], "")
 
-		state := arrowPadCood("A")
+		state := arrowPadButtondMap["A"]
 		var combinationResult []string
 		for b := range buttonsArray {
-			next := arrowPadCood(buttonsArray[b])
-			combo := from(state, next, coord{x: 0, y: 0})
+			next := arrowPadButtondMap[buttonsArray[b]]
+			combo := getMoveCombinations(state, next, coord{x: 0, y: 0})
 			combinationResult = combinations(combinationResult, combo)
 			state = next
 		}
@@ -175,6 +105,8 @@ func (a arrowPad) encode(buttonsCombinations []string) []string {
 			result = combinationResult
 		} else if len(combinationResult[0]) == len(result[0]) {
 			result = append(result, combinationResult...)
+		} else {
+			fmt.Println("here")
 		}
 	}
 
@@ -185,77 +117,44 @@ func (n numberPad) encode(code string) []string {
 	buttons := strings.Split(code, "")
 
 	var result []string
-	state := numberPadCoord("A")
+	state := numberPadButtonMap["A"]
 	for b := range buttons {
-		next := numberPadCoord(buttons[b])
-		result = combinations(result, from(state, next, coord{x: 0, y: 3}))
+		next := numberPadButtonMap[buttons[b]]
+		combo := getMoveCombinations(state, next, coord{x: 0, y: 3})
+		result = combinations(result, combo)
 		state = next
 	}
 
 	return result
 }
 
-//func (a arrowPad) decode(code string) string {
-//	fmt.Println("decode", code, "len", len(code), "countA", countA(code))
-//	buttons := strings.Split(code, "")
-//
-//	result := ""
-//	state := arrowPadCood("A")
-//	for _, button := range buttons {
-//		if button == "A" {
-//			result += arrowPadButton(state)
-//		} else {
-//			to(&state, button)
-//		}
-//	}
-//
-//	return a.e.decode(result)
-//}
-
-//func (a numberPad) decode(code string) string {
-//	fmt.Println("decode", code, "len", len(code), "countA", countA(code))
-//	buttons := strings.Split(code, "")
-//
-//	result := ""
-//	state := numberPadCoord("A")
-//	for _, button := range buttons {
-//		if button == "A" {
-//			result += numberPadButton(state)
-//		} else {
-//			to(&state, button)
-//		}
-//	}
-//
-//	return result
-//}
-
-func from(state, buttonCoord, spaceCoord coord) []string {
+func getMoveCombinations(start, end, emptyCoord coord) []string {
 	var result string
 
-	if state == buttonCoord {
+	if start == end {
 		return []string{"A"}
 	}
 
-	if buttonCoord.x-state.x > 0 {
-		result += strings.Repeat(">", buttonCoord.x-state.x)
+	if end.x-start.x > 0 {
+		result += strings.Repeat(">", end.x-start.x)
 	}
-	if state.x-buttonCoord.x > 0 {
-		result += strings.Repeat("<", state.x-buttonCoord.x)
+	if start.x-end.x > 0 {
+		result += strings.Repeat("<", start.x-end.x)
 	}
-	if state.y-buttonCoord.y > 0 {
-		result += strings.Repeat("^", state.y-buttonCoord.y)
+	if start.y-end.y > 0 {
+		result += strings.Repeat("^", start.y-end.y)
 	}
-	if buttonCoord.y-state.y > 0 {
-		result += strings.Repeat("v", buttonCoord.y-state.y)
+	if end.y-start.y > 0 {
+		result += strings.Repeat("v", end.y-start.y)
 	}
 
 	var resultPermutations []string
 checkLoop:
 	for _, r := range permute(result) {
-		testState := state
+		testState := start
 		for _, button := range r {
 			testState.applyButton(string(button))
-			if testState == spaceCoord {
+			if testState == emptyCoord {
 				continue checkLoop
 			}
 		}
@@ -314,13 +213,3 @@ func combinations(perm1, perm2 []string) []string {
 
 	return unique
 }
-
-//func countA(s string) int {
-//	count := 0
-//	for _, char := range s {
-//		if char == 'A' {
-//			count++
-//		}
-//	}
-//	return count
-//}
