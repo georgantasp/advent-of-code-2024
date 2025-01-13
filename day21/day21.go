@@ -24,15 +24,16 @@ func main() {
 func calculate(numberRobots int) int {
 	inputs := strings.Split(input, "\n")
 
-	a := arrowPad{}
+	a := arrowPad{cache: make(map[robotMove][]string)}
 	n := numberPad{}
 
 	total := 0
 	for _, i := range inputs {
 		fmt.Println(i)
 		all := n.encode(i)
-		for range numberRobots {
+		for rNum := range numberRobots {
 			all = a.encode(all)
+			fmt.Println("done rNum", rNum)
 		}
 		r := all[0]
 		l := len(r)
@@ -46,7 +47,14 @@ func calculate(numberRobots int) int {
 
 type numberPad struct{}
 
-type arrowPad struct{}
+type robotMove struct {
+	start coord
+	end   coord
+}
+
+type arrowPad struct {
+	cache map[robotMove][]string
+}
 
 type coord struct {
 	x, y int
@@ -89,25 +97,51 @@ var numberPadButtonMap = map[string]coord{
 
 func (a arrowPad) encode(buttonsCombinations []string) []string {
 	var result []string
-	for c := range buttonsCombinations {
-		buttonsArray := strings.Split(buttonsCombinations[c], "")
+	for i, c := range buttonsCombinations {
+		buttonsArray := strings.Split(c, "")
 
 		state := arrowPadButtondMap["A"]
-		var combinationResult []string
+		var combinationResult [][]string
 		for b := range buttonsArray {
 			next := arrowPadButtondMap[buttonsArray[b]]
-			combo := getMoveCombinations(state, next, coord{x: 0, y: 0})
-			combinationResult = combinations(combinationResult, combo)
+
+			if combo, ok := a.cache[robotMove{state, next}]; ok {
+				combinationResult = append(combinationResult, combo)
+			} else {
+				combo = getMoveCombinations(state, next, coord{x: 0, y: 0})
+				a.cache[robotMove{state, next}] = combo
+				combinationResult = append(combinationResult, combo)
+			}
+
 			state = next
 		}
 
-		if result == nil || len(combinationResult[0]) < len(result[0]) {
-			result = combinationResult
-		} else if len(combinationResult[0]) == len(result[0]) {
-			result = append(result, combinationResult...)
+		l := lengthOfCombinations(combinationResult)
+		if result == nil || l < len(result[0]) {
+			result = computeCombinations(combinationResult)
+		} else if l == len(result[0]) {
+			result = append(result, computeCombinations(combinationResult)...)
 		} else {
-			fmt.Println("here")
+			fmt.Println("here", i)
 		}
+	}
+
+	return result
+}
+
+func lengthOfCombinations(cs [][]string) int {
+	l := 0
+	for _, c := range cs {
+		l += len(c[0])
+	}
+
+	return l
+}
+
+func computeCombinations(cs [][]string) []string {
+	var result []string
+	for _, c := range cs {
+		result = combinations(result, c)
 	}
 
 	return result
@@ -129,28 +163,37 @@ func (n numberPad) encode(code string) []string {
 }
 
 func getMoveCombinations(start, end, emptyCoord coord) []string {
-	var result string
 
 	if start == end {
 		return []string{"A"}
 	}
 
+	var lr string
 	if end.x-start.x > 0 {
-		result += strings.Repeat(">", end.x-start.x)
+		lr = strings.Repeat(">", end.x-start.x)
+	} else if start.x-end.x > 0 {
+		lr = strings.Repeat("<", start.x-end.x)
 	}
-	if start.x-end.x > 0 {
-		result += strings.Repeat("<", start.x-end.x)
-	}
+
+	var ud string
 	if start.y-end.y > 0 {
-		result += strings.Repeat("^", start.y-end.y)
+		ud = strings.Repeat("^", start.y-end.y)
+	} else if end.y-start.y > 0 {
+		ud = strings.Repeat("v", end.y-start.y)
 	}
-	if end.y-start.y > 0 {
-		result += strings.Repeat("v", end.y-start.y)
+
+	var results []string
+	if lr == "" {
+		results = []string{ud}
+	} else if ud == "" {
+		results = []string{lr}
+	} else {
+		results = []string{lr + ud, ud + lr}
 	}
 
 	var resultPermutations []string
 checkLoop:
-	for _, r := range permute(result) {
+	for _, r := range results {
 		testState := start
 		for _, button := range r {
 			testState.applyButton(string(button))
@@ -163,29 +206,6 @@ checkLoop:
 	}
 
 	return resultPermutations
-}
-
-func permute(buttons string) []string {
-	if len(buttons) == 1 {
-		return []string{buttons}
-	}
-
-	results := make(map[string]struct{})
-
-	for i, button := range buttons {
-		next := buttons[:i] + buttons[i+1:]
-		permutations := permute(next)
-		for _, p := range permutations {
-			results[string(button)+p] = struct{}{}
-		}
-	}
-
-	unique := make([]string, 0, len(results))
-	for k := range results {
-		unique = append(unique, k)
-	}
-
-	return unique
 }
 
 func combinations(perm1, perm2 []string) []string {
