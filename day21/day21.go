@@ -97,7 +97,7 @@ var numberPadButtonMap = map[string]coord{
 
 func (a arrowPad) encode(buttonsCombinations []string) []string {
 	var result []string
-	for i, c := range buttonsCombinations {
+	for _, c := range buttonsCombinations {
 		buttonsArray := strings.Split(c, "")
 
 		state := arrowPadButtondMap["A"]
@@ -121,8 +121,6 @@ func (a arrowPad) encode(buttonsCombinations []string) []string {
 			result = computeCombinations(combinationResult)
 		} else if l == len(result[0]) {
 			result = append(result, computeCombinations(combinationResult)...)
-		} else {
-			fmt.Println("here", i)
 		}
 	}
 
@@ -184,11 +182,14 @@ func getMoveCombinations(start, end, emptyCoord coord) []string {
 
 	var results []string
 	if lr == "" {
-		results = []string{ud}
+		results = []string{ud + "A"}
 	} else if ud == "" {
-		results = []string{lr}
+		results = []string{lr + "A"}
 	} else {
-		results = []string{lr + ud, ud + lr}
+		results = []string{
+			lr + ud + "A",
+			ud + lr + "A",
+		}
 	}
 
 	var resultPermutations []string
@@ -202,7 +203,7 @@ checkLoop:
 			}
 		}
 
-		resultPermutations = append(resultPermutations, r+"A")
+		resultPermutations = append(resultPermutations, r)
 	}
 
 	return resultPermutations
