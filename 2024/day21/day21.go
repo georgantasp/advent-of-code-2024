@@ -35,12 +35,10 @@ func calculate(numberRobots int) int {
 			all = a.encode(all)
 			fmt.Println("done rNum", rNum)
 		}
-		r := all[0]
-		l := len(r)
 		num, _ := strconv.Atoi(i[0 : len(i)-1])
-		fmt.Println("len", len(r), "n", num)
+		fmt.Println("len", all[0].Length(), "n", num)
 
-		total += l * num
+		total += all[0].Length() * num
 	}
 	return total
 }
@@ -95,75 +93,82 @@ var numberPadButtonMap = map[string]coord{
 	"A": {x: 2, y: 3},
 }
 
-func (a arrowPad) encode(buttonsCombinations []string) []string {
-	var result []string
-	for _, c := range buttonsCombinations {
-		buttonsArray := strings.Split(c, "")
+type padCombinations struct {
+	sequences []sequence
+	length    int
+}
 
-		state := arrowPadButtondMap["A"]
-		var combinationResult [][]string
-		for b := range buttonsArray {
-			next := arrowPadButtondMap[buttonsArray[b]]
+func (p *padCombinations) Length() int {
+	if p.length != 0 {
+		return p.length
+	}
 
-			if combo, ok := a.cache[robotMove{state, next}]; ok {
-				combinationResult = append(combinationResult, combo)
-			} else {
-				combo = getMoveCombinations(state, next, coord{x: 0, y: 0})
-				a.cache[robotMove{state, next}] = combo
-				combinationResult = append(combinationResult, combo)
+	for _, s := range p.sequences {
+		p.length += len(s[0])
+	}
+
+	return p.length
+}
+
+type sequence []string
+
+func (a arrowPad) encode(padCombos []padCombinations) []padCombinations {
+	var result []padCombinations
+	for _, pc := range padCombos {
+		for _, s := range pc.sequences {
+
+			// sequence cache
+
+			buttonsArray := strings.Split(s, "")
+
+			state := arrowPadButtondMap["A"]
+			var combinationResult padCombinations
+			for b := range buttonsArray {
+				next := arrowPadButtondMap[buttonsArray[b]]
+
+				if combo, ok := a.cache[robotMove{state, next}]; ok {
+					combinationResult.sequences = append(combinationResult.sequences, combo)
+				} else {
+					combo = getMoveCombinations(state, next, coord{x: 0, y: 0})
+					a.cache[robotMove{state, next}] = combo
+					combinationResult.sequences = append(combinationResult.sequences, combo)
+				}
+
+				state = next
 			}
 
-			state = next
-		}
-
-		l := lengthOfCombinations(combinationResult)
-		if result == nil || l < len(result[0]) {
-			result = computeCombinations(combinationResult)
-		} else if l == len(result[0]) {
-			result = append(result, computeCombinations(combinationResult)...)
+			if result == nil || combinationResult.Length() < result[0].Length() {
+				result = []padCombinations{combinationResult}
+			} else if combinationResult.Length() == result[0].Length() {
+				result = append(result, combinationResult)
+			}
 		}
 	}
 
 	return result
 }
 
-func lengthOfCombinations(cs [][]string) int {
-	l := 0
-	for _, c := range cs {
-		l += len(c[0])
-	}
-
-	return l
-}
-
-func computeCombinations(cs [][]string) []string {
-	var result []string
-	for _, c := range cs {
-		result = combinations(result, c)
-	}
-
-	return result
-}
-
-func (n numberPad) encode(code string) []string {
+func (n numberPad) encode(code string) []padCombinations {
 	buttons := strings.Split(code, "")
 
-	var result []string
+	var result []sequence
 	state := numberPadButtonMap["A"]
 	for b := range buttons {
 		next := numberPadButtonMap[buttons[b]]
 		combo := getMoveCombinations(state, next, coord{x: 0, y: 3})
-		result = combinations(result, combo)
+		result = append(result, combo)
 		state = next
 	}
 
-	return result
+	return []padCombinations{{
+		sequences: result,
+	}}
 }
 
-func getMoveCombinations(start, end, emptyCoord coord) []string {
+func getMoveCombinations(start, end, emptyCoord coord) sequence {
 
 	if start == end {
-		return []string{"A"}
+		return sequence{"A"}
 	}
 
 	var lr string
@@ -180,19 +185,19 @@ func getMoveCombinations(start, end, emptyCoord coord) []string {
 		ud = strings.Repeat("v", end.y-start.y)
 	}
 
-	var results []string
+	var results sequence
 	if lr == "" {
-		results = []string{ud + "A"}
+		results = sequence{ud + "A"}
 	} else if ud == "" {
-		results = []string{lr + "A"}
+		results = sequence{lr + "A"}
 	} else {
-		results = []string{
+		results = sequence{
 			lr + ud + "A",
 			ud + lr + "A",
 		}
 	}
 
-	var resultPermutations []string
+	var resultPermutations sequence
 checkLoop:
 	for _, r := range results {
 		testState := start
@@ -209,28 +214,28 @@ checkLoop:
 	return resultPermutations
 }
 
-func combinations(perm1, perm2 []string) []string {
-	results := make(map[string]struct{})
-	if len(perm1) == 0 {
-		for _, s2 := range perm2 {
-			results[s2] = struct{}{}
-		}
-	} else if len(perm2) == 0 {
-		for _, s1 := range perm1 {
-			results[s1] = struct{}{}
-		}
-	} else {
-		for _, s1 := range perm1 {
-			for _, s2 := range perm2 {
-				results[s1+s2] = struct{}{}
-			}
-		}
-	}
-
-	unique := make([]string, 0, len(results))
-	for k := range results {
-		unique = append(unique, k)
-	}
-
-	return unique
-}
+//func combinations(perm1, perm2 []string) []string {
+//	results := make(map[string]struct{})
+//	if len(perm1) == 0 {
+//		for _, s2 := range perm2 {
+//			results[s2] = struct{}{}
+//		}
+//	} else if len(perm2) == 0 {
+//		for _, s1 := range perm1 {
+//			results[s1] = struct{}{}
+//		}
+//	} else {
+//		for _, s1 := range perm1 {
+//			for _, s2 := range perm2 {
+//				results[s1+s2] = struct{}{}
+//			}
+//		}
+//	}
+//
+//	unique := make([]string, 0, len(results))
+//	for k := range results {
+//		unique = append(unique, k)
+//	}
+//
+//	return unique
+//}
